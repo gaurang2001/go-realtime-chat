@@ -128,3 +128,106 @@ func (ser *server) listenForMessages(ctx context.Context, conn net.Conn, usernam
 		}
 	}
 }
+
+func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMutex, wg *sync.WaitGroup) {
+
+	/*
+		Spawned by Run() when a client connection is received. Performs authentication and username checking, responds
+		appropriately and after that, uses listenForMessages to handle incoming messages. Should handle cancellation of context
+		and messages written to the term channel in the above function
+	*/
+	finalmessage := make([]byte, 256)
+	if _, err := io.ReadFull(conn, finalmessage); err != nil {
+		shared.CheckError(err)
+		return
+	}
+	message := string(finalmessage)
+	fmt.Println(message)
+	msg := strings.Trim(message, "\r\n")
+	args := strings.Split(msg, "~")
+	if strings.Compare(args[0], "3") == 0 {
+		if strings.Compare(args[1], ser.password) == 0 {
+			if _, found := ser.clients[args[2]]; found == false {
+				wg.Add(1)
+				m.Lock()
+				ser.clients[args[2]] = conn
+				fmt.Printf("%s has logged in\n", args[2])
+				m.Unlock()
+				wg.Done()
+				conn.Write([]byte(shared.Padd("authenticated\n")))
+				term := make(chan bool)
+				go ser.listenForMessages(ctx, conn, args[2], term, m, wg)
+				select {
+				case v := <-term:
+					if v == true {
+						wg.Add(1)
+						m.Lock()
+						fmt.Printf("%s has logged out\n", args[2])
+						delete(ser.clients, args[2])
+						m.Unlock()
+						wg.Done()
+						return
+					}
+				case <-ctx.Done():
+					wg.Add(1)
+					m.Lock()
+					delete(ser.clients, args[2])
+					m.Unlock()
+					wg.Done()
+					return
+				}
+			} else {
+				conn.Write([]byte(shared.Padd("2~invalid_credentials\n")))
+			}
+		} else {
+			conn.Write([]byte(shared.Padd("2~invalid_credentials~\n")))
+		}
+	} else {
+		conn.Write([]byte(shared.Padd("2~invalid_credentials~\n")))
+	}
+}
+
+func (ser *server) listenForConnections(ctx context.Context, newConn chan net.Conn, listener *net.TCPListener, m *sync.RWMutex, wg *sync.WaitGroup) {
+
+	// Called from Run()
+	// Accept incoming connections from clients and write it to the newConn channel
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			conn, err := listener.Accept()
+			if err != nil {
+				shared.CheckError(err)
+				continue
+			}
+			newConn <- conn
+		}
+	}
+}
+
+func (ser *server) Run(ctx context.Context, done chan bool) {
+
+	// Bind a socket to a port and start listening on it. Use listenForConnections
+	// and listen for new connections written to the channel, and appropriately spawn
+	// handleClient. Also handle cancellation of context sent from main.
+	newConn := make(chan net.Conn)
+	service := ":" + ser.address
+	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
+	shared.CheckError(err)
+	listener, err := net.ListenTCP("tcp", tcpAddr)
+	shared.CheckError(err)
+	defer listener.Close()
+	var m sync.RWMutex
+	wg := sync.WaitGroup{}
+	go ser.listenForConnections(ctx, newConn, listener, &m, &wg)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case conn := <-newConn:
+			go ser.handleClient(ctx, conn, &m, &wg)
+		}
+	}
+	done <- true
+}
