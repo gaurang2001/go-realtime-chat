@@ -1,6 +1,16 @@
 /*
 * This file contains the definition for the server struct and the functions it implements.
- */
+
+There are two main classes of goroutines that exist in the server process:
+- The first class is a single goroutine that listens for connection requests from clients.
+  Whenever it receives a connection request, it creates a new goroutine that would come under
+  the second class.
+- The second class contains goroutines that handles the already established connections between
+  the clients. These goroutines allow the server and the client to send messages to each other.
+  Whenever a message is received from a particular client, the recipient's address is determined
+  using the map containing the current connections. The message is then sent to the relevant client
+  through the goroutine corresponding to that client.
+*/
 
 package server
 
@@ -13,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gaurang2001/simple-go-service/shared"
+	"github.com/gaurang2001/go-realtime-chat/shared"
 )
 
 type server struct {
