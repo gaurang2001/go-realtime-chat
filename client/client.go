@@ -153,7 +153,6 @@ func getServerMessage(conn net.Conn, rcvd_msg chan string, exit_chan chan bool) 
 
 func (cli *client) listenForServerMessages(ctx context.Context, conn net.Conn, final_term_chan chan bool) {
 
-<<<<<<< HEAD
 	
 	recv_mess := make(chan string)
 	exit_chan := make(chan bool)
@@ -231,8 +230,6 @@ func (cli *client) listenForClientMessages(ctx context.Context, sc bufio.Scanner
 
 func (cli *client) Run(ctx context.Context, main_term_chan chan bool) {
 
-=======
->>>>>>> 6806767802173e00c287c905dd43ed512233d0c5
 	conn, err := net.Dial("tcp", ":"+cli.ServerHost)
 	shared.CheckError(err)
 	sc := bufio.Scanner{}
