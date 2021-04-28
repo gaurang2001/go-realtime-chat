@@ -222,10 +222,7 @@ func (ser *server) listenForConnections(ctx context.Context, newConn chan net.Co
 }
 
 func (ser *server) Run(ctx context.Context, done chan bool) {
-
-	// Bind a socket to a port and start listening on it. Use listenForConnections
-	// and listen for new connections written to the channel, and appropriately spawn
-	// handleClient. Also handle cancellation of context sent from main.
+	
 	newConn := make(chan net.Conn)
 	service := ":" + ser.address
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
