@@ -38,9 +38,6 @@ func Server(pass string, address string) *server {
 		An instance of the 'server' struct is created, initialized with given
 		or the default data(if the user hasn't specified the data).
 	*/
-	if len(pass) == 0 {
-		pass = "1234"
-	}
 
 	if len(address) == 0 {
 		address = "8080"
@@ -146,22 +143,25 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 		appropriately and after that, uses listenForMessages to handle incoming messages. Should handle cancellation of context
 		and messages written to the term channel in the above function
 	*/
+
 	finalmessage := make([]byte, 256)
 	if _, err := io.ReadFull(conn, finalmessage); err != nil {
 		shared.CheckError(err)
 		return
 	}
 	message := string(finalmessage)
-	fmt.Println(message)
+	// fmt.Println(message)
 	msg := strings.Trim(message, "\r\n")
 	args := strings.Split(msg, "~")
 	if strings.Compare(args[0], "3") == 0 {
+		fmt.Printf("\nNew User is trying logged in!")
 		if strings.Compare(args[1], ser.password) == 0 {
+			fmt.Printf("\nThe password entered is correct")
 			if _, found := ser.clients[args[2]]; found == false {
 				wg.Add(1)
 				m.Lock()
 				ser.clients[args[2]] = conn
-				fmt.Printf("%s has logged in\n", args[2])
+				fmt.Printf("\n%s has logged in\n", args[2])
 				m.Unlock()
 				wg.Done()
 				conn.Write([]byte(shared.Padd("authenticated\n")))
@@ -187,13 +187,16 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 					return
 				}
 			} else {
-				conn.Write([]byte(shared.Padd("2~invalid_credentials\n")))
+				fmt.Printf("\nUser already exists! \n")
+				conn.Write([]byte(shared.Padd("2~invalid_user\n")))
 			}
 		} else {
-			conn.Write([]byte(shared.Padd("2~invalid_credentials~\n")))
+			fmt.Printf("\nServer Password entered is wrong!")
+			conn.Write([]byte(shared.Padd("2~invalid_password~\n")))
 		}
 	} else {
-		conn.Write([]byte(shared.Padd("2~invalid_credentials~\n")))
+		fmt.Printf("\nRequest made is not for Logging In!")
+		conn.Write([]byte(shared.Padd("2~invalid_request~\n")))
 	}
 }
 
@@ -218,15 +221,13 @@ func (ser *server) listenForConnections(ctx context.Context, newConn chan net.Co
 
 func (ser *server) Run(ctx context.Context, done chan bool) {
 
-	// Bind a socket to a port and start listening on it. Use listenForConnections
-	// and listen for new connections written to the channel, and appropriately spawn
-	// handleClient. Also handle cancellation of context sent from main.
 	newConn := make(chan net.Conn)
 	service := ":" + ser.address
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	shared.CheckError(err)
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	shared.CheckError(err)
+	fmt.Printf("\nServer listening on Port : %s \n", ser.address)
 	defer listener.Close()
 	var m sync.RWMutex
 	wg := sync.WaitGroup{}

@@ -15,20 +15,11 @@ func main() {
 	fmt.Scan(&arguments)
 	if arguments == "1" {
 		defer cancel()
-		var v int
 		var pass, addr string
-		fmt.Printf("Do you want to enter Server Password:?(0/1) ")
-		fmt.Scan(&v)
-		if v == 1 {
-			fmt.Printf("Enter the server Password:\t")
-			fmt.Scan(&pass)
-		}
-		fmt.Printf("Do you want to enter Port:?(0/1) ")
-		fmt.Scan(&v)
-		if v == 1 {
-			fmt.Printf("Enter the Port you want the server to attach to: ")
-			fmt.Scan(&addr)
-		}
+		fmt.Printf("Enter the Server Password (leave empty for no password) : ")
+		fmt.Scanln(&pass)
+		fmt.Printf("Enter the Server Port (leave empty for default port) : ")
+		fmt.Scanln(&addr)
 		s := server.Server(pass, addr)
 		done := make(chan bool)
 		go s.Run(ctx, done)
@@ -37,16 +28,11 @@ func main() {
 		}
 	} else if arguments == "2" {
 		var pass, name, addr string
-		var v int
-		fmt.Printf("Do you want to enter Username:?(0/1) ")
-		fmt.Scan(&v)
-		if v == 1 {
-			fmt.Printf("Enter username: ")
-			fmt.Scan(&name)
-		}
-		fmt.Printf("Enter the server Password: ")
-		fmt.Scan(&pass)
-		fmt.Printf("Enter the Port you want the server to attach to: ")
+		fmt.Printf("Enter the Client username (leave empty for default username) : ")
+		fmt.Scanln(&name)
+		fmt.Printf("Enter the Server Password : ")
+		fmt.Scanln(&pass)
+		fmt.Printf("Enter the Server Port you want the Client to attach to : ")
 		fmt.Scan(&addr)
 		term := make(chan bool)
 		cli := client.Client(pass, addr, name)
