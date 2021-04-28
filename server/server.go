@@ -152,11 +152,13 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 		return
 	}
 	message := string(finalmessage)
-	fmt.Println(message)
+	// fmt.Println(message)
 	msg := strings.Trim(message, "\r\n")
 	args := strings.Split(msg, "~")
 	if strings.Compare(args[0], "3") == 0 {
+		fmt.Printf("\nNew User has logged in!")
 		if strings.Compare(args[1], ser.password) == 0 {
+			fmt.Printf("\nThe password entered is correct")
 			if _, found := ser.clients[args[2]]; found == false {
 				wg.Add(1)
 				m.Lock()
@@ -187,13 +189,16 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 					return
 				}
 			} else {
-				conn.Write([]byte(shared.Padd("2~invalid_credentials\n")))
+				fmt.Printf("User already exists! \n")
+				conn.Write([]byte(shared.Padd("2~invalid_user\n")))
 			}
 		} else {
-			conn.Write([]byte(shared.Padd("2~invalid_credentials~\n")))
+			fmt.Printf(" Server Password entered is wrong!")
+			conn.Write([]byte(shared.Padd("2~invalid_password~\n")))
 		}
 	} else {
-		conn.Write([]byte(shared.Padd("2~invalid_credentials~\n")))
+		fmt.Printf(" Request made is not for Logging In!")
+		conn.Write([]byte(shared.Padd("2~invalid_request~\n")))
 	}
 }
 
