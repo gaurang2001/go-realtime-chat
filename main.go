@@ -11,18 +11,19 @@ import (
 func main() {
 	var arguments string
 	ctx, cancel := context.WithCancel(context.Background())
+	fmt.Println("To start the server press 1 or to use the client press 2")
 	fmt.Scan(&arguments)
 	if arguments == "1" {
 		defer cancel()
 		var v int
 		var pass, addr string
-		fmt.Printf("Wanna enter Server Password:?(0/1) ")
+		fmt.Printf("Do you want to enter Server Password:?(0/1) ")
 		fmt.Scan(&v)
 		if v == 1 {
 			fmt.Printf("Enter the server Password:\t")
 			fmt.Scan(&pass)
 		}
-		fmt.Printf("Wanna enter Port:?(0/1) ")
+		fmt.Printf("Do you want to enter Port:?(0/1) ")
 		fmt.Scan(&v)
 		if v == 1 {
 			fmt.Printf("Enter the Port you want the server to attach to: ")
@@ -37,7 +38,7 @@ func main() {
 	} else if arguments == "2" {
 		var pass, name, addr string
 		var v int
-		fmt.Printf("Wanna enter Username:?(0/1) ")
+		fmt.Printf("Do you want to enter Username:?(0/1) ")
 		fmt.Scan(&v)
 		if v == 1 {
 			fmt.Printf("Enter username: ")
