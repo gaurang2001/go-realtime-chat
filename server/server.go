@@ -128,7 +128,7 @@ func (ser *server) listenForMessages(ctx context.Context, conn net.Conn, usernam
 				}
 			case "2":
 				term <- true
-				str := "2~" + "Goodbye!" + "~\n"
+				str := "2~" + "Goodbye!\n\n" + "~\n"
 				conn.Write([]byte(shared.Padd(str)))
 				return
 			}
@@ -150,21 +150,20 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 		return
 	}
 	message := string(finalmessage)
-	// fmt.Println(message)
 	msg := strings.Trim(message, "\r\n")
 	args := strings.Split(msg, "~")
 	if strings.Compare(args[0], "3") == 0 {
-		fmt.Printf("\nNew User has logged in!")
+		fmt.Printf("\nNew User is trying logged in!")
 		if strings.Compare(args[1], ser.password) == 0 {
 			fmt.Printf("\nThe password entered is correct")
 			if _, found := ser.clients[args[2]]; found == false {
 				wg.Add(1)
 				m.Lock()
 				ser.clients[args[2]] = conn
-				fmt.Printf("%s has logged in\n", args[2])
+				fmt.Printf("\n%s has logged in\n", args[2])
 				m.Unlock()
 				wg.Done()
-				conn.Write([]byte(shared.Padd("authenticated\n")))
+				conn.Write([]byte(shared.Padd("\nauthenticated\n\n")))
 				term := make(chan bool)
 				go ser.listenForMessages(ctx, conn, args[2], term, m, wg)
 				select {
@@ -187,15 +186,15 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 					return
 				}
 			} else {
-				fmt.Printf("User already exists! \n")
+				fmt.Printf("\nUser already exists! \n")
 				conn.Write([]byte(shared.Padd("2~invalid_user\n")))
 			}
 		} else {
-			fmt.Printf(" Server Password entered is wrong!")
+			fmt.Printf("\nServer Password entered is wrong!")
 			conn.Write([]byte(shared.Padd("2~invalid_password~\n")))
 		}
 	} else {
-		fmt.Printf(" Request made is not for Logging In!")
+		fmt.Printf("\nRequest made is not for Logging In!")
 		conn.Write([]byte(shared.Padd("2~invalid_request~\n")))
 	}
 }
@@ -220,14 +219,14 @@ func (ser *server) listenForConnections(ctx context.Context, newConn chan net.Co
 }
 
 func (ser *server) Run(ctx context.Context, done chan bool) {
-	
+
 	newConn := make(chan net.Conn)
 	service := ":" + ser.address
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	shared.CheckError(err)
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	shared.CheckError(err)
-	fmt.Printf("\nServer listening on Port : %s \n", ser.address)
+	fmt.Printf("\nServer listening on Port : %s \n\n", ser.address)
 	defer listener.Close()
 	var m sync.RWMutex
 	wg := sync.WaitGroup{}

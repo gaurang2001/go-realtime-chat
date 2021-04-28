@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/gaurang2001/go-realtime-chat/shared"
@@ -60,8 +61,18 @@ func (cli *client) listenForServerMessages(ctx context.Context, conn net.Conn, f
 			return
 		case mess := <-rMsg:
 			msg := strings.Trim(mess, "\r\n")
-			fmt.Printf("\r%s\n", msg)
-			fmt.Printf(">>")
+			args := strings.Split(msg, "~")
+			switch args[0] {
+			case "0":
+				fmt.Printf("\r%s[broadcast]: %s\n", args[2], args[3])
+				break
+			case "1":
+				fmt.Printf("\r%s[private]: %s\n", args[1], args[2])
+				break
+			case "authenticated":
+				fmt.Println("\rLogged in successfully!!")
+			}
+			fmt.Printf("\r>> ")
 		case <-exitChan:
 			finalTermChan <- true
 			return
@@ -69,45 +80,50 @@ func (cli *client) listenForServerMessages(ctx context.Context, conn net.Conn, f
 	}
 }
 
-func (cli *client) getClientMessage(sc bufio.Scanner, recMsg chan string) {
+func (cli *client) getClientMessage(recMsg chan string) {
 	fMsg := ""
 	var ch int
 	var m string
-	fmt.Printf("Choose among the following (enter 1/2/3):\n\t1. PM\n\t2. Broadcast\n\t3. Terminate\n\t >>")
+	fmt.Printf("\rChoose among the following (enter 1/2/3):\n\t1. PM\n\t2. Broadcast\n\t3. Terminate\n\r>> ")
 	fmt.Scan(&ch)
+	in := bufio.NewReader(os.Stdin)
+
 	switch ch {
 	case 1:
-		fmt.Printf("\t Name of user to send message:\n>>")
+		fmt.Printf("\rName of user to send message:\n\r>> ")
 		fmt.Scan(&m)
 		fMsg = "1~" + m
-		fmt.Printf("\t Message:\n\t >>")
-		fmt.Scan(&m)
-		fMsg = fMsg + "~" + m
+		fmt.Printf("\r\nMessage:\n>> ")
+		line, err := in.ReadString('\n')
+		shared.CheckError(err)
+		fMsg = fMsg + "~" + line
 	case 2:
-		fmt.Printf("\t Message:\n\t >>")
-		fmt.Scan(&m)
-		fMsg = "0~" + "~" + cli.Username + "~" + m
+		fmt.Printf("\r\nMessage:\n>> ")
+		line, err := in.ReadString('\n')
+		shared.CheckError(err)
+		fMsg = "0~" + "~" + cli.Username + "~" + line
 	case 3:
-		fmt.Printf("\t Reason:\n\t >>")
-		fmt.Scan(&m)
-		fMsg = "2~" + "~" + m + "~"
+		fmt.Printf("\r\nReason:\n>> ")
+		line, err := in.ReadString('\n')
+		shared.CheckError(err)
+		fMsg = "2~" + "~" + line + "~"
 	default:
-		fmt.Printf("Choose right option\n\n")
+		fmt.Printf("\nChoose right option: ")
 		fMsg = "esc"
 	}
 	recMsg <- fMsg
 }
 
-func (cli *client) listenForClientMessages(ctx context.Context, sc bufio.Scanner, conn net.Conn, finalTermChan chan bool, termChan chan bool) {
+func (cli *client) listenForClientMessages(ctx context.Context, conn net.Conn, finalTermChan chan bool, termChan chan bool) {
 	rMsg := make(chan string)
 	for {
-		go cli.getClientMessage(sc, rMsg)
+		go cli.getClientMessage(rMsg)
 		select {
 		case <-ctx.Done():
 			finalTermChan <- true
 			return
 		case mess := <-rMsg:
-			msg := strings.Trim(mess, "\r\n")
+			msg := strings.Trim(mess, "\n")
 			args := strings.Split(msg, "~")
 			if strings.Compare(args[0], "esc") == 0 {
 				continue
@@ -128,13 +144,12 @@ func (cli *client) Run(ctx context.Context, mainTermChan chan bool) {
 
 	conn, err := net.Dial("tcp", ":"+cli.ServerHost)
 	shared.CheckError(err)
-	sc := bufio.Scanner{}
 	termChanClient := make(chan bool)
 	termChanServer := make(chan bool)
 	termChanExit := make(chan bool)
 	m := "3~" + cli.ServerPassword + "~" + cli.Username + "~"
 	conn.Write([]byte(shared.Padd(m)))
-	go cli.listenForClientMessages(ctx, sc, conn, termChanClient, termChanExit)
+	go cli.listenForClientMessages(ctx, conn, termChanClient, termChanExit)
 	go cli.listenForServerMessages(ctx, conn, termChanServer)
 	select {
 	case <-ctx.Done():
