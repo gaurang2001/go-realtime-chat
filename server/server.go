@@ -128,7 +128,7 @@ func (ser *server) listenForMessages(ctx context.Context, conn net.Conn, usernam
 				}
 			case "2":
 				term <- true
-				str := "2~" + "Goodbye!" + "~\n"
+				str := "2~" + "Goodbye!\n\n" + "~\n"
 				conn.Write([]byte(shared.Padd(str)))
 				return
 			}
@@ -150,7 +150,6 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 		return
 	}
 	message := string(finalmessage)
-	// fmt.Println(message)
 	msg := strings.Trim(message, "\r\n")
 	args := strings.Split(msg, "~")
 	if strings.Compare(args[0], "3") == 0 {
@@ -164,7 +163,7 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 				fmt.Printf("\n%s has logged in\n", args[2])
 				m.Unlock()
 				wg.Done()
-				conn.Write([]byte(shared.Padd("authenticated\n")))
+				conn.Write([]byte(shared.Padd("\nauthenticated\n\n")))
 				term := make(chan bool)
 				go ser.listenForMessages(ctx, conn, args[2], term, m, wg)
 				select {
@@ -227,7 +226,7 @@ func (ser *server) Run(ctx context.Context, done chan bool) {
 	shared.CheckError(err)
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	shared.CheckError(err)
-	fmt.Printf("\nServer listening on Port : %s \n", ser.address)
+	fmt.Printf("\nServer listening on Port : %s \n\n", ser.address)
 	defer listener.Close()
 	var m sync.RWMutex
 	wg := sync.WaitGroup{}

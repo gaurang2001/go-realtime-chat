@@ -1,12 +1,10 @@
 package client
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"strings"
 
 	"github.com/gaurang2001/go-realtime-chat/shared"
@@ -86,29 +84,25 @@ func (cli *client) getClientMessage(recMsg chan string) {
 	var m string
 	fmt.Printf("\rChoose among the following (enter 1/2/3):\n\t1. PM\n\t2. Broadcast\n\t3. Terminate\n\r>> ")
 	fmt.Scan(&ch)
-	in := bufio.NewReader(os.Stdin)
 
 	switch ch {
 	case 1:
-		fmt.Printf("\rName of user to send message:\n\r>> ")
+		fmt.Printf("\n\tName of user to send message:\n\t >> ")
 		fmt.Scan(&m)
 		fMsg = "1~" + m
-		fmt.Printf("\r\nMessage:\n>> ")
-		line, err := in.ReadString('\n')
-		shared.CheckError(err)
-		fMsg = fMsg + "~" + line
+		fmt.Printf("\n\tMessage:\n\t >> ")
+		fmt.Scan(&m)
+		fMsg = fMsg + "~" + m
 	case 2:
-		fmt.Printf("\r\nMessage:\n>> ")
-		line, err := in.ReadString('\n')
-		shared.CheckError(err)
-		fMsg = "0~" + "~" + cli.Username + "~" + line
+		fmt.Printf("\n\tMessage:\n\t >> ")
+		fmt.Scan(&m)
+		fMsg = "0~" + "~" + cli.Username + "~" + m
 	case 3:
-		fmt.Printf("\r\nReason:\n>> ")
-		line, err := in.ReadString('\n')
-		shared.CheckError(err)
-		fMsg = "2~" + "~" + line + "~"
+		fmt.Printf("\n\tReason:\n\t >> ")
+		fmt.Scan(&m)
+		fMsg = "2~" + "~" + m + "~"
 	default:
-		fmt.Printf("Choose right option\n\n")
+		fmt.Printf("\nChoose right option: ")
 		fMsg = "esc"
 	}
 	recMsg <- fMsg
