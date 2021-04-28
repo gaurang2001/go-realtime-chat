@@ -19,14 +19,18 @@ type client struct {
 
 func Client(password string, host string, username string) *client {
 
+	/*
+		An instance of the 'client' struct is created, initialized with given
+		or the default data(if the user hasn't specified the data).
+	*/
+
 	if len(username) == 0 {
 		username = shared.RandSeq(8)
 	}
 	return &client{username, password, host}
 }
 
-func getServerMessage(conn net.Conn, rcvd_msg chan string, exit_chan chan bool) {
-
+func getServerMessage(conn net.Conn, recMsg chan string, exitChan chan bool) {
 	finalmessage := make([]byte, 256)
 	_, err := io.ReadFull(conn, finalmessage)
 	shared.CheckError(err)
@@ -35,38 +39,38 @@ func getServerMessage(conn net.Conn, rcvd_msg chan string, exit_chan chan bool) 
 	args := strings.Split(msg, "~")
 	if err == io.EOF {
 		fmt.Println("Server exited unexpectedly")
-		exit_chan <- true
+		exitChan <- true
 	} else if strings.Compare(args[0], "2") == 0 {
 		fmt.Printf("Server - %s", args[1])
-		exit_chan <- true
+		exitChan <- true
 	} else {
-		rcvd_msg <- mess
+		recMsg <- mess
 	}
 }
 
-func (cli *client) listenForServerMessages(ctx context.Context, conn net.Conn, final_term_chan chan bool) {
+func (cli *client) listenForServerMessages(ctx context.Context, conn net.Conn, finalTermChan chan bool) {
 
-	recv_mess := make(chan string)
-	exit_chan := make(chan bool)
+	rMsg := make(chan string)
+	exitChan := make(chan bool)
 	for {
-		go getServerMessage(conn, recv_mess, exit_chan)
+		go getServerMessage(conn, rMsg, exitChan)
 		select {
 		case <-ctx.Done():
-			final_term_chan <- true
+			finalTermChan <- true
 			return
-		case mess := <-recv_mess:
+		case mess := <-rMsg:
 			msg := strings.Trim(mess, "\r\n")
 			fmt.Printf("\r%s\n", msg)
 			fmt.Printf(">>")
-		case <-exit_chan:
-			final_term_chan <- true
+		case <-exitChan:
+			finalTermChan <- true
 			return
 		}
 	}
 }
 
-func (cli *client) getClientMessage(sc bufio.Scanner, rcvd_msg chan string) {
-	f_m := ""
+func (cli *client) getClientMessage(sc bufio.Scanner, recMsg chan string) {
+	fMsg := ""
 	var ch int
 	var m string
 	fmt.Printf("Choose among the following (enter 1/2/3):\n\t1. PM\n\t2. Broadcast\n\t3. Terminate\n\t >>")
@@ -75,34 +79,34 @@ func (cli *client) getClientMessage(sc bufio.Scanner, rcvd_msg chan string) {
 	case 1:
 		fmt.Printf("\t Name of user to send message:\n>>")
 		fmt.Scan(&m)
-		f_m = "1~" + m
+		fMsg = "1~" + m
 		fmt.Printf("\t Message:\n\t >>")
 		fmt.Scan(&m)
-		f_m = f_m + "~" + m
+		fMsg = fMsg + "~" + m
 	case 2:
 		fmt.Printf("\t Message:\n\t >>")
 		fmt.Scan(&m)
-		f_m = "0~" + "~" + cli.Username + "~" + m
+		fMsg = "0~" + "~" + cli.Username + "~" + m
 	case 3:
 		fmt.Printf("\t Reason:\n\t >>")
 		fmt.Scan(&m)
-		f_m = "2~" + "~" + m + "~"
+		fMsg = "2~" + "~" + m + "~"
 	default:
 		fmt.Printf("Choose right option\n\n")
-		f_m = "esc"
+		fMsg = "esc"
 	}
-	rcvd_msg <- f_m
+	recMsg <- fMsg
 }
 
-func (cli *client) listenForClientMessages(ctx context.Context, sc bufio.Scanner, conn net.Conn, final_term_chan chan bool, term_chan chan bool) {
-	recv_mess := make(chan string)
+func (cli *client) listenForClientMessages(ctx context.Context, sc bufio.Scanner, conn net.Conn, finalTermChan chan bool, termChan chan bool) {
+	rMsg := make(chan string)
 	for {
-		go cli.getClientMessage(sc, recv_mess)
+		go cli.getClientMessage(sc, rMsg)
 		select {
 		case <-ctx.Done():
-			final_term_chan <- true
+			finalTermChan <- true
 			return
-		case mess := <-recv_mess:
+		case mess := <-rMsg:
 			msg := strings.Trim(mess, "\r\n")
 			args := strings.Split(msg, "~")
 			if strings.Compare(args[0], "esc") == 0 {
@@ -110,46 +114,46 @@ func (cli *client) listenForClientMessages(ctx context.Context, sc bufio.Scanner
 			}
 			conn.Write([]byte(shared.Padd(msg)))
 			if strings.Compare(args[0], "2") == 0 {
-				final_term_chan <- true
+				finalTermChan <- true
 				return
 			}
-		case <-term_chan:
-			final_term_chan <- true
+		case <-termChan:
+			finalTermChan <- true
 			return
 		}
 	}
 }
 
-func (cli *client) Run(ctx context.Context, main_term_chan chan bool) {
+func (cli *client) Run(ctx context.Context, mainTermChan chan bool) {
 
 	conn, err := net.Dial("tcp", ":"+cli.ServerHost)
 	shared.CheckError(err)
 	sc := bufio.Scanner{}
-	term_chan_client := make(chan bool)
-	term_chan_server := make(chan bool)
-	term_chan_exit := make(chan bool)
+	termChanClient := make(chan bool)
+	termChanServer := make(chan bool)
+	termChanExit := make(chan bool)
 	m := "3~" + cli.ServerPassword + "~" + cli.Username + "~"
 	conn.Write([]byte(shared.Padd(m)))
-	go cli.listenForClientMessages(ctx, sc, conn, term_chan_client, term_chan_exit)
-	go cli.listenForServerMessages(ctx, conn, term_chan_server)
+	go cli.listenForClientMessages(ctx, sc, conn, termChanClient, termChanExit)
+	go cli.listenForServerMessages(ctx, conn, termChanServer)
 	select {
 	case <-ctx.Done():
-		main_term_chan <- true
+		mainTermChan <- true
 		break
-	case <-term_chan_server:
-		term_chan_exit <- true
+	case <-termChanServer:
+		termChanExit <- true
 		select {
-		case <-term_chan_client:
+		case <-termChanClient:
 			break
 		}
-		main_term_chan <- true
+		mainTermChan <- true
 		break
-	case <-term_chan_client:
+	case <-termChanClient:
 		select {
-		case <-term_chan_server:
+		case <-termChanServer:
 			break
 		}
-		main_term_chan <- true
+		mainTermChan <- true
 		break
 	}
 }

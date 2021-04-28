@@ -38,9 +38,6 @@ func Server(pass string, address string) *server {
 		An instance of the 'server' struct is created, initialized with given
 		or the default data(if the user hasn't specified the data).
 	*/
-	if len(pass) == 0 {
-		pass = "1234"
-	}
 
 	if len(address) == 0 {
 		address = "8080"
@@ -146,6 +143,7 @@ func (ser *server) handleClient(ctx context.Context, conn net.Conn, m *sync.RWMu
 		appropriately and after that, uses listenForMessages to handle incoming messages. Should handle cancellation of context
 		and messages written to the term channel in the above function
 	*/
+
 	finalmessage := make([]byte, 256)
 	if _, err := io.ReadFull(conn, finalmessage); err != nil {
 		shared.CheckError(err)
@@ -229,6 +227,7 @@ func (ser *server) Run(ctx context.Context, done chan bool) {
 	shared.CheckError(err)
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	shared.CheckError(err)
+	fmt.Printf("\nServer listening on Port : %s \n", ser.address)
 	defer listener.Close()
 	var m sync.RWMutex
 	wg := sync.WaitGroup{}
