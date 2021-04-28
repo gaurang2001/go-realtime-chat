@@ -61,7 +61,7 @@ func (cli *client) listenForServerMessages(ctx context.Context, conn net.Conn, f
 		case mess := <-rMsg:
 			msg := strings.Trim(mess, "\r\n")
 			fmt.Printf("\r%s\n", msg)
-			fmt.Printf(">>")
+			fmt.Printf("\t >> ")
 		case <-exitChan:
 			finalTermChan <- true
 			return
@@ -73,26 +73,26 @@ func (cli *client) getClientMessage(sc bufio.Scanner, recMsg chan string) {
 	fMsg := ""
 	var ch int
 	var m string
-	fmt.Printf("Choose among the following (enter 1/2/3):\n\t1. PM\n\t2. Broadcast\n\t3. Terminate\n\t >>")
+	fmt.Printf("\nChoose among the following (enter 1/2/3):\n\t1. PM\n\t2. Broadcast\n\t3. Terminate\n\t >> ")
 	fmt.Scan(&ch)
 	switch ch {
 	case 1:
-		fmt.Printf("\t Name of user to send message:\n>>")
+		fmt.Printf("\n\tName of user to send message:\n\t >> ")
 		fmt.Scan(&m)
 		fMsg = "1~" + m
-		fmt.Printf("\t Message:\n\t >>")
+		fmt.Printf("\n\tMessage:\n\t >> ")
 		fmt.Scan(&m)
 		fMsg = fMsg + "~" + m
 	case 2:
-		fmt.Printf("\t Message:\n\t >>")
+		fmt.Printf("\n\tMessage:\n\t >> ")
 		fmt.Scan(&m)
 		fMsg = "0~" + "~" + cli.Username + "~" + m
 	case 3:
-		fmt.Printf("\t Reason:\n\t >>")
+		fmt.Printf("\n\tReason:\n\t >> ")
 		fmt.Scan(&m)
 		fMsg = "2~" + "~" + m + "~"
 	default:
-		fmt.Printf("Choose right option\n\n")
+		fmt.Printf("\nChoose right option: ")
 		fMsg = "esc"
 	}
 	recMsg <- fMsg
